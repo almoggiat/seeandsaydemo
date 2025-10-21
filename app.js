@@ -58,6 +58,8 @@ function App() {
     localStorage.removeItem("audioChunks");
     localStorage.removeItem("audioUrl");
     localStorage.removeItem("recPaused");
+    localStorage.removeItem("devMode");
+    localStorage.removeItem("idDigits");
 
     window.location.reload();
   }

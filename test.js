@@ -8,12 +8,14 @@ function Test({ allQuestions }) {
   // Persistent states
   const [ageYears, setAgeYears] = usePersistentState("ageYears", "");
   const [ageMonths, setAgeMonths] = usePersistentState("ageMonths", "");
+  const [idDigits, setId] = usePersistentState("idDigits", "")
   const [ageConfirmed, setAgeConfirmed] = usePersistentState("ageConfirmed", false);
   const [ageInvalid, setAgeInvalid] = usePersistentState("ageInvalid", false);
   const [currentIndex, setCurrentIndex] = usePersistentState("currentIndex", 0);
   const [correctAnswers, setCorrectAnswers] = usePersistentState("correctAnswers", 0);
   const [partialAnswers, setPartialAnswers] = usePersistentState("partialAnswers", 0);
   const [wrongAnswers, setWrongAnswers] = usePersistentState("wrongAnswers", 0);
+  const [devMode, setDevMode] = usePersistentState("devMode", false)
 
   // Microphone persistent
   const [permission, setPermission] = usePersistentState("permission", false);
@@ -71,6 +73,59 @@ function Test({ allQuestions }) {
     };
   }, []);
 
+
+
+
+  // =============================================================================
+  // DEVELOPER MODE FUNCTIONS
+  // ================ =============================================================
+
+React.useEffect(() => {
+    function handleKeyDown(event) {
+      // Check if Control (or Command on Mac) + Q are pressed together
+      if ((event.ctrlKey || event.metaKey) && event.key === "q") {
+        event.preventDefault(); // Prevents default browser action
+        setDevMode(prevDevMode => !prevDevMode);
+        return;
+      }
+
+      // Handle arrow keys in dev mode
+      if (devMode) {
+        if (event.key === "ArrowRight") {
+          updateCurrentQuestionIndex(prevIdx => {
+            if (prevIdx < questions.length - 1) {
+              return prevIdx + 1;
+            }
+            return prevIdx;
+          });
+        } else if (event.key === "ArrowLeft") {
+          updateCurrentQuestionIndex(prevIdx => {
+            if (prevIdx > 0) {
+              return prevIdx - 1;
+            }
+            return prevIdx;
+          });
+        } else if (event.key === "Enter") {
+          event.preventDefault();
+          const inputElement = document.querySelector('.dev-mode-input');
+          if (inputElement) {
+            const value = Number(inputElement.value) - 1;
+            if (value >= 0 && value < questions.length){
+              updateCurrentQuestionIndex(value);
+            }
+          }
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [devMode]); 
+
+
+
   // =============================================================================
   // UTILITY FUNCTIONS
   // =============================================================================
@@ -91,6 +146,7 @@ function Test({ allQuestions }) {
   function confirmAge() {
     const y = parseInt(ageYears, 10);
     const m = parseInt(ageMonths, 10);
+    const id = idDigits
     if (isNaN(y) || isNaN(m) || m < 0 || m > 11) {
       alert("Please enter a valid age (months 0–11).");
       return;
@@ -100,7 +156,11 @@ function Test({ allQuestions }) {
       setAgeInvalid(true);
       return;
     }
-    
+    if (id.length != 9)
+    {
+      alert("please enter a valid ID number")
+      return
+    }
     // Simply confirm age and start with all questions
     setAgeConfirmed(true);
   }
@@ -612,7 +672,7 @@ function Test({ allQuestions }) {
     return React.createElement(
       "div",
       { className: "age-screen" },
-      React.createElement("h2", null, "Please enter your age"),
+      React.createElement("h2", null, "Please enter your age and id"),
       React.createElement("input", {
         type: "number",
         placeholder: "Years",
@@ -627,6 +687,14 @@ function Test({ allQuestions }) {
         value: ageMonths,
         onChange: function(e) {
           setAgeMonths(e.target.value.replace(/\D/g, ""));
+        },
+      }),
+      React.createElement("input", {
+        type: "number",
+        placeholder: "id",
+        value: idDigits,
+        onChange: function(e) {
+          setId(e.target.value.replace(/\D/g, ""));
         },
       }),
       React.createElement(
@@ -699,15 +767,43 @@ function Test({ allQuestions }) {
   const currentQuestion = questions[currentIdx];
   const currentQuestionAgeGroup = currentQuestion ? currentQuestion.age_group : "";
 
-  // Main UI
+ // Main UI
   return React.createElement(
     "div",
-    { className: "app-container" },
+    { 
+      className: "app-container",
+      style: devMode ? { backgroundColor: "#808080" } : {}
+    },
+    devMode
+      ? React.createElement(
+          "div",
+          { className: "dev-mode-indicator", style: { padding: "10px", textAlign: "center" } },
+          React.createElement("button", {
+            style: {
+              backgroundColor: "#ff6b6b",
+              color: "white",
+              padding: "10px 20px",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+              fontWeight: "bold"
+            },
+            onClick: function() {
+              setDevMode(false)
+            }
+          }, "TURN OFF DEV MODE"),  // <-- Added comma here
+          React.createElement("input", {
+            type: "number", 
+            className: "dev-mode-input"  
+
+          })
+        )
+        
+      : null,
     React.createElement(ProgressBar),
     React.createElement(
       "div",
       { className: "test-info" },
-      React.createElement("h3", null, "Age Group: " + currentQuestionAgeGroup),
       React.createElement("p", null, "Question " + (currentIdx + 1) + " of " + questions.length)
     ),
 
